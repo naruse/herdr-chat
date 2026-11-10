@@ -42,6 +42,7 @@ A chat window for [Herdr](https://herdr.dev) that sits over your Claude Code and
 - **Search the conversation**: ⌘F (Ctrl+F on Linux and Windows), or the search icon in the header, shows only the messages that match.
 - **Permissions from the message box**: Claude's modes (Ask before edits, Accept edits, Plan, Auto, Bypass) or Codex's (Ask for approval, Approve for me, Full Access, Read Only), next to the model.
 - **Move to chat**: a Claude or Codex terminal you started yourself gets a **Move to chat** button in the tab bar that opens it as a chat.
+- **New space on a machine**: its **+** offers **Terminal** for a shell or **Chat** for an agent conversation. The **+** in the Spaces header opens a new chat.
 
 ## Install
 
@@ -73,7 +74,8 @@ To keep your own layout instead, point its pane header at `chat-pane` and its ta
 | `mods/chat-file` | The editor dialog behind `/memory`, `/hooks` and `/config` |
 | `mods/chat-pane` | The pane header: closing a chat or an agent's terminal asks first |
 | `mods/chat-tabs` | The tab bar with a **Move to chat** button |
-| `mods/spaces-chat` | The spaces sidebar with **New chat there** |
+| `mods/spaces-chat` | The spaces sidebar with machine-specific space creation |
+| `mods/space-choice` | The Terminal/Chat menu for a machine's **+** |
 | `layouts/chat.json` | Herdr's main layout, using the mods above |
 | `keys.json` | New chat on ⌘N (macOS) or Ctrl+N (Linux and Windows), through `secondary-n` |
 
