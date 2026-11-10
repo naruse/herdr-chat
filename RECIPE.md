@@ -50,7 +50,7 @@ The terminal stays one click away.
 - **File editor** (`chat-file`): an 820×600 dialog with the file's name and path, **Close** and **Save** (⌘S), and a code editor.
 - **Elsewhere**:
   - The tab bar (`chat-tabs`) gets a **Move to chat** button left of Files and Changes, in the `accent` color with an `accent` border. It shows only while the shown tab has a Claude or Codex terminal and no chat; with a chat open, the chat's own header shows or hides the terminal.
-  - The spaces sidebar (`spaces-chat`) gets **New chat there** buttons.
+  - Each machine's **+** in the spaces sidebar (`spaces-chat`) offers **Terminal** or **Chat**. Empty machines show **New space there** with the same choices. The Spaces header's **+** opens a new chat.
   - ⌘N (Ctrl+N on Linux and Windows) opens the New chat form: pick the agent, folder, model and effort, then Start.
 
 ## How it behaves
@@ -97,7 +97,7 @@ The terminal stays one click away.
 ## Built from
 
 - **Layout** `layouts/chat.json` (a copy of `main`):
-  - Sidebar: `workspace-chrome`, `spaces-chat`, `agents`, `workspace-chrome`.
+  - Sidebar: `workspace-chrome`, `spaces-chat`, `agents`, `workspace-chrome`. The machine **+** opens the `space-choice` popup, passing the chosen machine to either a new shell space or the chat form.
   - Work column: `chat-tabs`, then the active tab with the `chat-pane` header on each pane, and the Files/Changes stack. `workspace-status` at the bottom.
 - **`mods/chat`**:
   - `main.js`: the view.
@@ -159,7 +159,8 @@ The terminal stays one click away.
 
 ## Done when
 
-- `herdr-app check` passes for `chat`, `chat-file`, `chat-pane`, `chat-tabs` and `spaces-chat`.
+- `herdr-app check` passes for `chat`, `chat-file`, `chat-pane`, `chat-tabs`, `spaces-chat` and `space-choice`.
+- Each machine's **+** and its **New space there** row offer Terminal and Chat. Terminal opens a shell on that machine; Chat opens the new-chat form with that machine selected. Clicking outside or pressing Esc dismisses the popup.
 - **Basics**: ⌘N (Ctrl+N on Linux), Start → a new space with the chat zoomed over a fresh agent, and the folder-trust question answered by itself. Sending a message shows it at once and the reply as it's written.
 - **`/` menu**:
   - Typing `/` shows *Skills*, *Model ›* and *All commands ›*.
