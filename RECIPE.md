@@ -97,7 +97,7 @@ The terminal stays one click away.
 ## Built from
 
 - **Layout** `layouts/chat.json` (a copy of `main`):
-  - Sidebar: `workspace-chrome`, `spaces-chat`, `agents`, `workspace-chrome`.
+  - Sidebar: `workspace-chrome`, `spaces-chat`, `agents-chat`, `workspace-chrome`.
   - Work column: `chat-tabs`, then the active tab with the `chat-pane` header on each pane, and the Files/Changes stack. `workspace-status` at the bottom.
 - **`mods/chat`**:
   - `main.js`: the view.
@@ -132,15 +132,18 @@ The terminal stays one click away.
   - `python3`, `claude` and/or `codex`, `sh`.
   - For the desktop: `pbcopy` and `osascript` (macOS); `wl-copy`, `xclip`, `xsel` or KDE Klipper over `qdbus`, `kdialog` or `zenity`, and `xdg-open` (Linux).
 - **`mods/chat-pane`**: a copy of the shipped `pane` header whose × asks before ending an agent. Its method is called `closePane`, not `close`.
-- **Hiding the terminal** (`backstage.js`, one copy in `chat` and one in `chat-pane`; a mod can't import another mod's files): `terminal.park` takes the pane and the `herdr.space`/`herdr.tab` labels away and the terminal keeps running. `hc label <t> herdr.space=<space> herdr.tab=<new id>` then adopts it into a new tab, which `tab.settle` puts away. The label `chat.tab` on the terminal remembers the chat's tab. Showing it labels it back into that tab. The chat settles the agent's tab again whenever something (the Agents list, a finished reply) brings it back and it isn't shown.
+- **Hiding the terminal** (`backstage.js`, one copy in `chat` and one in `chat-pane`; a mod can't import another mod's files): `terminal.park` takes the pane and the `herdr.space`/`herdr.tab` labels away and the terminal keeps running. `hc label <t> herdr.space=<space> herdr.tab=<new id>` then adopts it into a new tab, which `tab.settle` puts away. The label `chat.tab` on the terminal remembers the chat's tab. Showing it labels it back into that tab. While it's away, going to its tab (clicking the agent in the Agents list, a toast) shows the chat instead, and the chat settles the tab again whenever something (a finished reply) brings it back.
 - **`mods/chat-tabs`** leaves settled tabs out unless one is shown.
 - **`mods/chat-tabs`**: a copy of the shipped `tabs` with the Move to chat button. It splits a chat pane to the right of the tab's agent with `run("pane.split")`, then zooms it once it shows up in `panes()`.
 - **`mods/spaces-chat`**: a copy of the shipped `spaces` sidebar whose + opens the New chat form.
+- **`mods/agents-chat`**: a copy of the shipped `agents` list (`mod.clone`). Clicking an agent with a chat focuses the chat pane, found in the agent's tab or in the tab named by its `chat.tab` label, instead of the agent's pane. Its row is highlighted while that chat has focus.
 - **`keys.json`**: `secondary-n` → `mod.open:chat`. `secondary` is ⌘ on macOS and Ctrl on Linux and Windows, so one file fits every platform.
 
 ## Watch out
 
 - **Never name a View method `close`.** Herdr calls `close(cx)` itself when a copy goes away. A header whose close button was named `close` closed the focused pane, and with it chats and agents.
+- **`pane.focus` on a pane behind a zoom moves the zoom to it.** The shipped agents list focuses the agent's terminal, so it replaced a zoomed chat with the terminal, and for a hidden terminal it showed the hidden tab first. Anything that goes to an agent with a chat should focus the chat pane.
+- **Saving a mod file can end a chat's loops while the chat stays.** A chat stopped showing new messages after a reload, though its log kept growing. Each loop (reading the log, following the screen, the 2-second check) keeps a heartbeat, and a quiet one is started again: check() restarts the others, and render restarts check's timer.
 - **Wait for `terminal.park` to land before relabelling.** It answers `pending` and drops the labels once the machine replies; labels set before that are lost. Poll `hc get <t> --json` until `herdr.tab` is gone.
 - **`run()` calls from a mod aren't ordered.** For steps that must happen in order (unzoom, focus, then swap), run `herdr-app do …` through `exec`, one after another.
 - **The message box keeps ↑/↓ and Esc for itself.** Bind them with `cx.bind_keys` to actions under `"<YourContext> > Input"`, and set that `key_context` on the box's wrapper only while a menu is open. Tab and letters reach `on_key_down`; arrows and Esc don't.
@@ -159,7 +162,7 @@ The terminal stays one click away.
 
 ## Done when
 
-- `herdr-app check` passes for `chat`, `chat-file`, `chat-pane`, `chat-tabs` and `spaces-chat`.
+- `herdr-app check` passes for `chat`, `chat-file`, `chat-pane`, `chat-tabs`, `spaces-chat` and `agents-chat`.
 - **Basics**: ⌘N (Ctrl+N on Linux), Start → a new space with the chat zoomed over a fresh agent, and the folder-trust question answered by itself. Sending a message shows it at once and the reply as it's written.
 - **`/` menu**:
   - Typing `/` shows *Skills*, *Model ›* and *All commands ›*.

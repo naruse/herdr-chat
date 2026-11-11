@@ -147,6 +147,10 @@ export default class Chat extends View {
     this.width = 600;
     this.ticks = 0;
     this.catalogs = {};
+    // One pending watchFolder per folder: a watch that loses the 15-second
+    // race stays open until the folder changes, so starting a new one each
+    // time piles them up until Herdr's task limit stops the chat loading.
+    this.watches = {};
     this.cmds = null; // the / menu's commands for this agent and folder
     // The side chat (/btw): questions about the conversation, answered by a
     // read-only fork of it, so the agent is never interrupted.
@@ -213,7 +217,7 @@ export default class Chat extends View {
       }
     });
     if (this.dialog) this.loadCatalog(this.cfg.kind, this.cfg.machine, cx);
-    cx.timer.every(2000, (cx) => this.check(cx));
+    this.checkTimer = cx.timer.every(2000, (cx) => this.check(cx));
     this.check(cx);
   }
 
@@ -283,9 +287,10 @@ export default class Chat extends View {
   // While the agent works: the reply it's writing, read off its terminal a few
   // times a second, until the log has it.
   follow(kind, cx) {
-    const loop = (this.streamLoop = {});
+    const loop = (this.streamLoop = { beat: Date.now() });
     cx.spawn(async (cx) => {
       while (this.streamLoop === loop && this.terminal()?.status === "working") {
+        loop.beat = Date.now();
         const r = await hc(["read", this.term, "--lines", "80"]).catch(() => null);
         const now = r ? live(r.stdout, kind) : null;
         const text = now?.kind === "text" ? now.text : null;
@@ -1098,21 +1103,48 @@ export default class Chat extends View {
 
   // Follows the terminal: which agent runs there, which log it writes, and
   // what it shows while waiting for the person.
+  // While the agent's terminal is away from the chat (Hide terminal), its own
+  // tab stays out of sight: going there (the Agents list, a toast) shows the
+  // chat instead, and whatever brings the tab back (a finished reply) puts it
+  // away again. Called from render too, so the switch is immediate.
+  keepAway() {
+    const term = this.terminal();
+    const own = away(term) && spaces().flatMap((s) => s.tabs).find((x) => x.id === this.label("tab"));
+    const mine = own && this.myPane();
+    if (!own || !mine) return;
+    if (own.active) {
+      if (this.redirected === own.id) return;
+      this.redirected = own.id;
+      run("tab.select", { id: mine.tab });
+      run("pane.focus", { pane: mine.pane });
+      return;
+    }
+    this.redirected = null;
+    // Once per few seconds: render runs again before the settle shows.
+    if (!own.settled && term.status !== "blocked" && !(Date.now() - (this.settled?.[own.id] ?? 0) < 3000)) {
+      this.settled = { [own.id]: Date.now() };
+      run("tab.settle", { id: own.id });
+    }
+  }
+
   check(cx) {
+    this.checked = Date.now();
     const term = this.terminal();
     const mine = this.myPane();
     if (mine) this.pane = mine.pane;
-    // The agent's own tab, while it's away from the chat: showing it (from the
-    // Agents list) or the agent needing you brings it back; put it away again after.
-    const own = away(term) && spaces().flatMap((s) => s.tabs).find((x) => x.id === this.label("tab"));
-    if (own && !own.settled && !own.active && term.status !== "blocked") run("tab.settle", { id: own.id });
+    this.keepAway();
     const kind = agentKind(term);
     this.loadCmds(term, kind, cx);
-    if (kind && term?.status === "working" && !this.streamLoop) this.follow(kind, cx);
+    // A loop that went quiet has stopped (a reload of the mod ends its tasks
+    // but keeps the chat): start it again rather than freeze the chat.
+    const quiet = (since, ms) => Date.now() - (since ?? 0) > ms;
+    if (kind && term?.status === "working" && (!this.streamLoop || quiet(this.streamLoop.beat, 10000))) this.follow(kind, cx);
+    if (this.file && kind && quiet(this.beat, 60000)) this.start(this.file, machineOf(this.term), kind, cx);
+    if (this.locating && quiet(this.locating, 60000)) this.locating = null;
     const sig = term && kind ? `${kind}:${term.foreground?.pid}` : null;
     this.ticks++;
     if (sig && !this.locating && (sig !== this.sig || this.ticks % 3 === 0 || !this.file)) {
-      this.locating = true;
+      this.locating = Date.now();
       cx.spawn(async (cx) => {
         try {
           const file = await locate(term, kind);
@@ -1122,7 +1154,7 @@ export default class Chat extends View {
         } catch (e) {
           this.error = String(e?.message ?? e);
         }
-        this.locating = false;
+        this.locating = null;
         cx.notify();
       });
     }
@@ -1183,8 +1215,10 @@ export default class Chat extends View {
     this.error = null;
     const tail = new Tail(file, on);
     const dir = file.slice(0, file.lastIndexOf("/"));
+    this.beat = Date.now();
     cx.spawn(async (cx) => {
       while (gen === this.gen) {
+        this.beat = Date.now();
         try {
           const lines = await tail.read();
           if (gen !== this.gen) return;
@@ -1202,7 +1236,12 @@ export default class Chat extends View {
           cx.notify();
         }
         if (on) await sleep(cx, 1500);
-        else await Promise.race([watchFolder(dir).catch(() => sleep(cx, 3000)), sleep(cx, 15000)]);
+        else {
+          const w = (this.watches[dir] ??= watchFolder(dir).catch(() => sleep(cx, 3000)).finally(() => {
+            if (this.watches[dir] === w) delete this.watches[dir];
+          }));
+          await Promise.race([w, sleep(cx, 15000)]);
+        }
       }
     });
   }
@@ -2167,9 +2206,16 @@ export default class Chat extends View {
     });
   }
 
-  render() {
+  render(cx) {
     const t = theme();
     const term = this.term ? this.terminal() : null;
+    if (term) this.keepAway();
+    // The 2-second check stopped too (see check): start it again.
+    if (this.term && cx && Date.now() - (this.checked ?? 0) > 10000) {
+      this.checked = Date.now();
+      try { this.checkTimer?.cancel(); } catch {}
+      this.checkTimer = cx.timer.every(2000, (cx) => this.check(cx));
+    }
     if (!this.dialog && !this.term) {
       return v_flex().id("root").size_full().bg(t.background).items_center().justify_center().text_color(t.dim)
         .child(`No agent here. Press ${shortcut("N")} for a new chat.`);

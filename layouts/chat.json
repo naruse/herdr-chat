@@ -42,7 +42,7 @@
               "id": "agents",
               "type": "block",
               "content": {
-                "mod": "agents"
+                "mod": "agents-chat"
               },
               "size": {
                 "weight": 1

@@ -63,7 +63,7 @@ Then merge `keys.json` into `~/.config/herdr-app/keys.json`. Its `secondary-n` i
   - `kdialog` or `zenity` for the **+** file picker.
   - `wl-clipboard` or `xclip` (or KDE's Klipper) for `/copy` and pasting images.
 
-To keep your own layout instead, point its pane header at `chat-pane` and its tab bar at `chat-tabs`. Optionally, point its spaces sidebar at `spaces-chat`. See [RECIPE.md](RECIPE.md) for how it all works.
+To keep your own layout instead, point its pane header at `chat-pane` and its tab bar at `chat-tabs`. Optionally, point its spaces sidebar at `spaces-chat` and its agents list at `agents-chat`. See [RECIPE.md](RECIPE.md) for how it all works.
 
 ## What's in it
 
@@ -74,6 +74,7 @@ To keep your own layout instead, point its pane header at `chat-pane` and its ta
 | `mods/chat-pane` | The pane header: closing a chat or an agent's terminal asks first |
 | `mods/chat-tabs` | The tab bar with a **Move to chat** button |
 | `mods/spaces-chat` | The spaces sidebar with **New chat there** |
+| `mods/agents-chat` | The agents list: clicking an agent that has a chat opens the chat |
 | `layouts/chat.json` | Herdr's main layout, using the mods above |
 | `keys.json` | New chat on ⌘N (macOS) or Ctrl+N (Linux and Windows), through `secondary-n` |
 
