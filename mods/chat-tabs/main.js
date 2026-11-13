@@ -21,7 +21,7 @@ function isAgent(pane) {
 
 // An agent terminal that moved out of its chat's tab (the chat's Hide terminal).
 function hasChat(pane) {
-  return Boolean(terminals().find((x) => x.address === pane.terminal)?.labels?.["chat.tab"]);
+  return Boolean(chatTabOf(pane));
 }
 
 // The tab of the chat that agent terminal stepped out of, as tabs are named in
@@ -30,7 +30,10 @@ function chatTabOf(pane) {
   const term = pane.terminal && terminals().find((x) => x.address === pane.terminal);
   const id = term?.labels?.["chat.tab"];
   if (!id) return null;
-  return term.address.includes("/") ? `${term.address.split("/")[0]}/${id}` : id;
+  const tab = term.address.includes("/") ? `${term.address.split("/")[0]}/${id}` : id;
+  // Other layouts can close the chat without clearing the terminal's label.
+  // A label alone must not hide Move to chat or offer a broken Back to chat.
+  return panes().some((p) => p.tab === tab && p.mod === "chat") ? tab : null;
 }
 
 export default class Tabs extends View {
